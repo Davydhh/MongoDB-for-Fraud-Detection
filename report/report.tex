@@ -1,0 +1,105 @@
+%++++++++++++++++++++++++++++++++++++++++
+% Don't modify this section unless you know what you're doing!
+\documentclass[letterpaper,11pt]{article}
+\usepackage{natbib}
+\bibliographystyle{unsrtnat}
+\usepackage{tabularx} % extra features for tabular environment
+\usepackage{amsmath}  % improve math presentation
+\usepackage{graphicx} % takes care of graphic including machinery
+\usepackage[margin=1in,letterpaper]{geometry} % decreases margins
+%\usepackage{cite} % takes care of citations
+\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
+\hypersetup{
+	colorlinks=true,       % false: boxed links; true: colored links
+	linkcolor=blue,        % color of internal links
+	citecolor=blue,        % color of links to bibliography
+	filecolor=magenta,     % color of file links
+	urlcolor=blue         
+}
+%+++++++++++++++++++++++++++++++++++++++
+\begin{document}
+
+\title{NEW GENERATION DATA MODELS AND DBMSS \\\textbf{Fraud Detection (...un titolo figo...)}}
+\author{Giussani Riccardo, Cazzetta Davide}
+\date{January 2022}
+\maketitle
+
+\begin{abstract}
+Due righe sul tipo di problema, sul perchè abbiamo scelto mongo; cose belle di Mongo... 
+\textbf{ultima cosa da fare}
+\end{abstract}
+
+\section{Conceptual Model}
+
+explanations, motivations, constraints, and any other information that allows understanding the design carried out.
+\\
+\begin{figure}[ht] 
+        \centering \includegraphics[width=0.9\columnwidth]{FraudDetectionUML.png}
+        \caption{\label{fig1}Questo è UML dei dati come vengono generati dallo script}
+\end{figure}
+Come detto ci sono due entità, \textbf{Customer} e \textbf{Terminal}, con la relazione \textbf{Transaction}.
+\\
+Tra Customer e Terminal esiste anche la relazione \textbf{available terminal}
+\\
+In un ipotetico DB relazionale, avrei la tabella \textbf{Transaction} che funge da join table tra Customer e Terminal.
+\\
+Constraints e supposizioni:
+\begin{enumerate}
+    \item può sussistere una transaction tra un customer e un terminal se e solo se sussiste tra quei due anche la relazione \textbf{available terminal}
+    \item può sussistere la relazione \textbf{available terminal} tra customer e terminal se e solo se il punto in cui si trova terminal è entro un certo raggio dalle coordinate di customer
+    \item le coordinate geografiche sono tra 0 e 100
+    \item datetime è una stringa conforme
+    \item fraudolent è un boolean che dobbiamo calcolare noi
+\end{enumerate}
+\textbf{questa sezione risponde alla activity 1 e al punto a) del file da inviare}
+
+\section{Logical Model}
+Per questo potrebbero servire anche
+\begin{enumerate}
+    \item per ogni customer, quante transactions esegue (mean nb tx per day * giorni totali)
+    \item per ogni terminal, quante transactions esegue  (?)
+    \item per ogni customer, quanti terminal sono available (dovrebbe essere 100 nello script)
+    \item per ogni terminal, per quanti customer è available (?)
+\end{enumerate}
+questo per poter mettere le cardinalità (min, caso medio, max)
+\\
+The logical data model that has been realized for addressing the requirements imposed by the proposed operations. It is mandatory the presence of the motivations that led to the generation of the data model.
+provide a data modeling to optimize the execution of the following operations
+\\
+qui bisogna riportare tutte le query e spiegare cosa si è scelto di tenere embedded e cosa per ref. Quali query sono più importanti; spiegare che per la richiesta d) i i "kind of product" saranno a caso, mentre "period of the day" dipende dalla data generata
+\\
+Importanti i design pattern.
+\\
+\textbf{questa sezione risponde alla activity 2 e al punto b) del file da inviare}
+
+\section{Ingestion Layer}
+Lo script per mettere i dati su MongoDB\\
+Possiamo fare anche che mettiamo su i dati in maniera basilare (una collezione per customer, una per terminal e una per transaction, così come sono) e poi cambiamo lo schema e ottimizziamo direttamente con i comandi mongo. (?)
+\\
+Occorre quindi scaricare anche le tabelle Customer e Terminal (?) Oppure basta usare la tabella transactions (?)
+\\
+\textbf{questa sezione risponde al punto c) del file da inviare}
+
+\section{Queries}
+Come sono implementate le query\\
+\textbf{questa sezione risponde al punto d) del file da inviare}
+
+\section{Performance}
+Valutazione performance\\
+\textbf{questa sezione risponde al punto e) del file da inviare}
+
+\section{Conclusion}
+This section should be brief, concise, but complete. Directly answer your objectives, state your findings with errors, and conclude whether or not you were successful. Briefly explain if not successful.
+
+\begin{thebibliography}{99}
+
+\bibitem[\protect\citeauthoryear{Author}{2010}]{Author2010}
+Author, A.N and Another, A. N., 2010, MNRAS, 431, 28.
+
+\end{thebibliography}
+
+\appendix
+
+\section*{Appendice: Niente}
+
+\end{document}
