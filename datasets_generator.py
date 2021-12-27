@@ -237,20 +237,20 @@ class DatasetsGenerator:
         path = "./datasets"
         files = [f for f in listdir(path) if isfile(join(path, f))]
 
-        transactions_file = "{}/transactions_{}.csv".format(path, self.start_date)
+        transactions_file = "{}/transactions_{}.json".format(path, self.start_date)
 
         if transactions_file not in files:
-            transactions_df.to_csv(transactions_file)
+            transactions_df.to_json(transactions_file, orient="records")
 
-        customers_file = "{}/customers.csv".format(path)
+        customers_file = "{}/customers.json".format(path)
 
         if customers_file not in files:
-            customer_profiles_table.to_csv(customers_file)
+            customer_profiles_table.to_json(customers_file, orient="records")
 
-        terminals_file = "{}/terminals.csv".format(path)
+        terminals_file = "{}/terminals.json".format(path)
 
         if terminals_file not in files:
-            terminal_profiles_table.to_csv(terminals_file)
+            terminal_profiles_table.to_json(terminals_file, orient="records")
 
 
 
