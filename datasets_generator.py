@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import random
 import time
+from os import listdir
+from os.path import isfile, join
 
 ### Generate customer table
 
@@ -35,7 +37,6 @@ def generate_customer_profiles_table(n_customers, random_state=0):
 
 n_customers = 5
 customer_profiles_table = generate_customer_profiles_table(n_customers, random_state = 0)
-customer_profiles_table
 
 ### Generate Terminal table
 
@@ -61,7 +62,6 @@ def generate_terminal_profiles_table(n_terminals, random_state=0):
 
 n_terminals = 5
 terminal_profiles_table = generate_terminal_profiles_table(n_terminals, random_state = 0)
-terminal_profiles_table
 
 ### Association of customer profiles to terminals
 
@@ -89,10 +89,7 @@ x_y_terminals = terminal_profiles_table[['x_terminal_id','y_terminal_id']].value
 # And get the list of terminals within radius of $50$ for the last customer
 get_list_terminals_within_radius(customer_profiles_table.iloc[4], x_y_terminals=x_y_terminals, r=50)
 
-terminal_profiles_table
-
 customer_profiles_table['available_terminals']=customer_profiles_table.apply(lambda x : get_list_terminals_within_radius(x, x_y_terminals=x_y_terminals, r=50), axis=1)
-customer_profiles_table
 
 ### Generate associations table
 
@@ -149,15 +146,12 @@ def generate_transactions_table(customer_profile, start_date = "2018-04-01", nb_
 transaction_table_customer_0=generate_transactions_table(customer_profiles_table.iloc[0], 
                                                          start_date = "2018-04-01", 
                                                          nb_days = 5)
-transaction_table_customer_0
 
 transactions_df=customer_profiles_table.groupby('CUSTOMER_ID').apply(lambda x : generate_transactions_table(x.iloc[0], nb_days=5)).reset_index(drop=True)
-transactions_df
 
 ### Generate larger datasets
 
 def generate_dataset(n_customers = 10000, n_terminals = 1000000, nb_days=90, start_date="2018-04-01", r=5):
-    
     start_time=time.time()
     customer_profiles_table = generate_customer_profiles_table(n_customers, random_state = 0)
     print("Time to generate customer profiles table: {0:.2}s".format(time.time()-start_time))
@@ -188,13 +182,13 @@ def generate_dataset(n_customers = 10000, n_terminals = 1000000, nb_days=90, sta
     # TRANSACTION_ID are the dataframe indices, starting from 0
     transactions_df.rename(columns = {'index':'TRANSACTION_ID'}, inplace = True)
     
-    return (customer_profiles_table, terminal_profiles_table, transactions_df)
+    return (customer_profiles_table, terminal_profiles_table, transactions_df, start_date)
 
-(customer_profiles_table, terminal_profiles_table, transactions_df)=\
+(customer_profiles_table, terminal_profiles_table, transactions_df, start_date)=\
     generate_dataset(n_customers = 5000, 
                      n_terminals = 10000, 
                      nb_days=183, 
-                     start_date="2018-04-01", 
+                     start_date="2019-04-01", 
                      r=5)
 
 ### Fraud scenarios generation
@@ -253,18 +247,27 @@ def add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df
 
 transactions_df = add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df)
 
-transactions_df.head()
-
 ## Saving of dataset
 
 ### Transactions table
+path = "./datasets"
+files = [f for f in listdir(path) if isfile(join(path, f))]
 
-transactions_df.to_csv("transactions.csv")
+transactions_file = "{}/transactions_{}.csv".format(path, start_date)
+
+if transactions_file not in files:
+    transactions_df.to_csv(transactions_file)
 
 ### Customers table
 
-customer_profiles_table.to_csv("customers.csv")
+customers_file = "{}/customers.csv".format(path)
+
+if customers_file not in files:
+    customer_profiles_table.to_csv(customers_file)
 
 ### Terminals table
 
-terminal_profiles_table.to_csv("terminals.csv")
+terminals_file = "{}/terminals.csv".format(path)
+
+if terminals_file not in files:
+    terminal_profiles_table.to_csv(terminals_file)
