@@ -34,10 +34,14 @@ Due righe sul tipo di problema, sul perchè abbiamo scelto mongo; cose belle di 
 explanations, motivations, constraints, and any other information that allows understanding the design carried out.
 \\
 \begin{figure}[ht] 
-        \centering \includegraphics[width=0.9\columnwidth]{FraudDetectionUML.png}
+        \centering \includegraphics[width=0.9\columnwidth]{images/FraudDetectionUML.png}
         \caption{\label{fig1}Questo è UML dei dati come vengono generati dallo script}
 \end{figure}
 Come detto ci sono due entità, \textbf{Customer} e \textbf{Terminal}, con la relazione \textbf{Transaction}.
+\\
+CERCA QUESTIONE ID
+\\
+Teniamo fissi Customer e Terminal (?)
 \\
 Tra Customer e Terminal esiste anche la relazione \textbf{available terminal}
 \\
@@ -49,34 +53,57 @@ Constraints e supposizioni:
     \item può sussistere la relazione \textbf{available terminal} tra customer e terminal se e solo se il punto in cui si trova terminal è entro un certo raggio dalle coordinate di customer
     \item le coordinate geografiche sono tra 0 e 100
     \item datetime è una stringa conforme
-    \item fraudolent è un boolean che dobbiamo calcolare noi
+    \item fraudulent è un boolean che dobbiamo calcolare noi
 \end{enumerate}
 \textbf{questa sezione risponde alla activity 1 e al punto a) del file da inviare}
 
 \section{Logical Model}
-Per questo potrebbero servire anche
+\subsection{Naive modeling}
+Essendo Transactions un'entità centrale, scegliamo di trattarla come entità (nel senso, è una relazione ma è molto importante)
+\\
+Per questo servono
 \begin{enumerate}
     \item per ogni customer, quante transactions esegue (mean nb tx per day * giorni totali)
     \item per ogni terminal, quante transactions esegue  (?)
     \item per ogni customer, quanti terminal sono available (dovrebbe essere 100 nello script)
     \item per ogni terminal, per quanti customer è available (?)
 \end{enumerate}
-questo per poter mettere le cardinalità (min, caso medio, max)
+\begin{figure}[ht] 
+        \centering \includegraphics[width=0.9\columnwidth]{images/MongoCardinality.png}
+        \caption{\label{fig1}Cardinalità delle relazioni; va bene così perchè card C-T è diversa da quella T-T}
+\end{figure}
+Queries tell us how to navigate relationships:
+\begin{enumerate}
+    \item[a)] requires navigability from Customer to Transaction, to compute the sum
+    \item[b)] requires to navigate from terminal to transaction, in order to compute the average, then from transaction to terminal in order to mark fraudulent transactions
+    \item[c)] requires to navigate from customer to terminal: we check for customers all terminals used in at least a transaction and then lookup for other customers that allow us to do the chain
+    \item[d)] only requires transactions data, and also to generate a new collection, which will navigate from buyingFriends to Customer (we'll see the cardinality). buyingFriends is transitive !
+    \item[e)] only requires transactions data
+\end{enumerate}
+NOTA: i dati di terminal non sono mai acceduti, quindi se ne stanno in una collezione loro e uso solo ref.
 \\
 The logical data model that has been realized for addressing the requirements imposed by the proposed operations. It is mandatory the presence of the motivations that led to the generation of the data model.
 provide a data modeling to optimize the execution of the following operations
+\begin{figure}[ht] 
+        \centering \includegraphics[width=0.9\columnwidth]{images/MongoNaiveNavigability.png}
+        \caption{\label{fig1}Questa è la navigabilità naive, solo guardando le query. Poi bisogna vedere le cardinalità}
+\end{figure}
+Considerazioni:
+\begin{enumerate}
+    \item navigation from customer to transaction is impractical: ZILLIONS!
+    \item navigation from terminal to transaction is impractical: ZILLIONS!
+\end{enumerate}
+I think we should just navigate from transactions to the other two, do things through a lookup (\textbf{in the naive case!})
 \\
 qui bisogna riportare tutte le query e spiegare cosa si è scelto di tenere embedded e cosa per ref. Quali query sono più importanti; spiegare che per la richiesta d) i i "kind of product" saranno a caso, mentre "period of the day" dipende dalla data generata
 \\
-Importanti i design pattern.
-\\
+\textbf{Prima eseguiremo le query sulle collezioni base, poi su quelle ottimizzate coi design pattern per far vedere che si va a migliorare}
+\subsection{Design Pattern}
 \textbf{questa sezione risponde alla activity 2 e al punto b) del file da inviare}
 
 \section{Ingestion Layer}
 Lo script per mettere i dati su MongoDB\\
-Possiamo fare anche che mettiamo su i dati in maniera basilare (una collezione per customer, una per terminal e una per transaction, così come sono) e poi cambiamo lo schema e ottimizziamo direttamente con i comandi mongo. (?)
-\\
-Occorre quindi scaricare anche le tabelle Customer e Terminal (?) Oppure basta usare la tabella transactions (?)
+Scarichiamo tutte le tabelle. Creiamo file da 50MB, ciascuno col suo range di giorni (3 mesi) e li andiamo ad aggiungere incrementalmente
 \\
 \textbf{questa sezione risponde al punto c) del file da inviare}
 
@@ -85,7 +112,7 @@ Come sono implementate le query\\
 \textbf{questa sezione risponde al punto d) del file da inviare}
 
 \section{Performance}
-Valutazione performance\\
+Valutazione performance, sia nel caso naive che nel caso ottimizzato coi pattern\\
 \textbf{questa sezione risponde al punto e) del file da inviare}
 
 \section{Conclusion}
@@ -101,5 +128,7 @@ Author, A.N and Another, A. N., 2010, MNRAS, 431, 28.
 \appendix
 
 \section*{Appendice: Niente}
+
+Prova
 
 \end{document}
