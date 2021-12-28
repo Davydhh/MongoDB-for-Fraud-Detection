@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import random
 import time
-from os import listdir
-from os.path import isfile, join
+from os import listdir, makedirs
+from os.path import isfile, isdir, join
 
 
 def generate_customer_profiles_table(n_customers, random_state=0):
@@ -235,6 +235,8 @@ class DatasetsGenerator:
 
     def save_datasets(self, customer_profiles_table, terminal_profiles_table, transactions_df):
         path = "./datasets"
+        if not isdir(path):
+            makedirs(path)
         files = [f for f in listdir(path) if isfile(join(path, f))]
 
         transactions_file = "{}/transactions_{}.json".format(path, self.start_date)
