@@ -2,6 +2,7 @@ import pymongo
 import json
 import os
 import logging
+import time
 
 
 # client = pymongo.MongoClient("mongodb+srv://Davide:davide@cluster0.ovl1s.mongodb.net/projectDB?retryWrites"
@@ -12,6 +13,7 @@ db = client.projectDB
 
 
 def load_datasets():
+    start_time = time.time()
     path = "./datasets/"
     with open("{}customers.json".format(path)) as file:
         if db.customers.count() == 0:
@@ -26,5 +28,5 @@ def load_datasets():
             with open(os.path.join(path, filename)) as file:
                 db.transactions.insert_many(json.load(file))
 
-    logging.info("Datasets stored on MongoDB")
+    logging.info("Datasets stored on MongoDB in {} seconds".format(time.time()-start_time))
 
