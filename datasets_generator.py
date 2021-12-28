@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 import random
-import time
-from os import listdir
-from os.path import isfile, join
+import re
+import logging
+import os
+
+logging.basicConfig(level=logging.NOTSET)
 
 
 def generate_customer_profiles_table(n_customers, random_state=0):
@@ -133,6 +135,7 @@ def generate_transactions_table(customer_profile, start_date, nb_days):
 
 def add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df):
     """Fraud scenarios generation"""
+    logging.info("Adding frauds")
 
     # By default, all transactions are genuine
     transactions_df['TX_FRAUD'] = 0
@@ -142,7 +145,6 @@ def add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df
     transactions_df.loc[transactions_df.TX_AMOUNT > 220, 'TX_FRAUD'] = 1
     transactions_df.loc[transactions_df.TX_AMOUNT > 220, 'TX_FRAUD_SCENARIO'] = 1
     nb_frauds_scenario_1 = transactions_df.TX_FRAUD.sum()
-    print("Number of frauds from scenario 1: " + str(nb_frauds_scenario_1))
 
     # Scenario 2
     for day in range(transactions_df.TX_TIME_DAYS.max()):
@@ -156,7 +158,6 @@ def add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df
         transactions_df.loc[compromised_transactions.index, 'TX_FRAUD_SCENARIO'] = 2
 
     nb_frauds_scenario_2 = transactions_df.TX_FRAUD.sum() - nb_frauds_scenario_1
-    print("Number of frauds from scenario 2: " + str(nb_frauds_scenario_2))
 
     # Scenario 3
     for day in range(transactions_df.TX_TIME_DAYS.max()):
@@ -177,37 +178,31 @@ def add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df
         transactions_df.loc[index_fauds, 'TX_FRAUD_SCENARIO'] = 3
 
     nb_frauds_scenario_3 = transactions_df.TX_FRAUD.sum() - nb_frauds_scenario_2 - nb_frauds_scenario_1
-    print("Number of frauds from scenario 3: " + str(nb_frauds_scenario_3))
+
+    logging.info("Frauds added")
 
     return transactions_df
 
 
 def generate_dataset(start_date, nb_days):
     """Generate larger datasets"""
+    logging.info("Generating datasets for date {} and {} days of transactions".format(start_date, nb_days))
 
-    start_time = time.time()
     customer_profiles_table = generate_customer_profiles_table(5000, random_state=0)
-    print("Time to generate customer profiles table: {0:.2}s".format(time.time() - start_time))
 
-    start_time = time.time()
-    terminal_profiles_table = generate_terminal_profiles_table(1000, random_state=1)
-    print("Time to generate terminal profiles table: {0:.2}s".format(time.time() - start_time))
+    terminal_profiles_table = generate_terminal_profiles_table(10000, random_state=1)
 
-    start_time = time.time()
     x_y_terminals = terminal_profiles_table[['x_terminal_id', 'y_terminal_id']].values.astype(float)
     customer_profiles_table['available_terminals'] = customer_profiles_table.apply(
         lambda x: get_list_terminals_within_radius(x, x_y_terminals=x_y_terminals, r=5), axis=1)
     # With Pandarallel
     # customer_profiles_table['available_terminals'] = customer_profiles_table.parallel_apply(lambda x : get_list_closest_terminals(x, x_y_terminals=x_y_terminals, r=r), axis=1)
     customer_profiles_table['nb_terminals'] = customer_profiles_table.available_terminals.apply(len)
-    print("Time to associate terminals to customers: {0:.2}s".format(time.time() - start_time))
 
-    start_time = time.time()
     transactions_df = customer_profiles_table.groupby('CUSTOMER_ID').apply(
         lambda x: generate_transactions_table(x.iloc[0], start_date, nb_days=nb_days)).reset_index(drop=True)
     # With Pandarallel
     # transactions_df=customer_profiles_table.groupby('CUSTOMER_ID').parallel_apply(lambda x : generate_transactions_table(x.iloc[0], nb_days=nb_days)).reset_index(drop=True)
-    print("Time to generate transactions: {0:.2}s".format(time.time() - start_time))
 
     # Sort transactions chronologically
     transactions_df = transactions_df.sort_values('TX_DATETIME')
@@ -216,6 +211,11 @@ def generate_dataset(start_date, nb_days):
     transactions_df.reset_index(inplace=True)
     # TRANSACTION_ID are the dataframe indices, starting from 0
     transactions_df.rename(columns={'index': 'TRANSACTION_ID'}, inplace=True)
+    # TRANSACTION_ID are the combination of TX_DATETIME and TERMINAL_ID
+    transactions_df['TRANSACTION_ID'] = transactions_df.apply(
+        lambda row: "".join(re.findall('\d+', str(row.TX_DATETIME))) + str(row.TERMINAL_ID), axis=1)
+
+    logging.info("Dataset generated")
 
     return customer_profiles_table, terminal_profiles_table, transactions_df
 
@@ -235,7 +235,11 @@ class DatasetsGenerator:
 
     def save_datasets(self, customer_profiles_table, terminal_profiles_table, transactions_df):
         path = "./datasets"
-        files = [f for f in listdir(path) if isfile(join(path, f))]
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
 
         transactions_file = "{}/transactions_{}.json".format(path, self.start_date)
 
@@ -252,5 +256,4 @@ class DatasetsGenerator:
         if terminals_file not in files:
             terminal_profiles_table.to_json(terminals_file, orient="records")
 
-
-
+        logging.info("Datasets saved")
