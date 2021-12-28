@@ -29,8 +29,13 @@ Due righe sul tipo di problema, sul perchè abbiamo scelto mongo; cose belle di 
 \textbf{ultima cosa da fare}
 \end{abstract}
 
-\section{Conceptual Model}
-
+\section{Introduction}
+\subsection{Motivation}
+\subsection{Conceptual Model}
+\begin{enumerate}
+    \item ref allo script e due parole sul problema
+    \item UML, constraints e supposizioni
+\end{enumerate}
 explanations, motivations, constraints, and any other information that allows understanding the design carried out.
 \\
 \begin{figure}[ht] 
@@ -55,24 +60,15 @@ Constraints e supposizioni:
     \item datetime è una stringa conforme
     \item fraudulent è un boolean che dobbiamo calcolare noi
 \end{enumerate}
-\textbf{questa sezione risponde alla activity 1 e al punto a) del file da inviare}
 
 \section{Logical Model}
-\subsection{Naive modeling}
-Essendo Transactions un'entità centrale, scegliamo di trattarla come entità (nel senso, è una relazione ma è molto importante)
-\\
-Per questo servono
-\begin{enumerate}
-    \item per ogni customer, quante transactions esegue (mean nb tx per day * giorni totali)
-    \item per ogni terminal, quante transactions esegue  (?)
-    \item per ogni customer, quanti terminal sono available (dovrebbe essere 100 nello script)
-    \item per ogni terminal, per quanti customer è available (?)
-\end{enumerate}
+\subsection{Baseline Model}
+Essendo Transactions un'entità centrale, scegliamo di trattarla come entità (nel senso, è una relazione ma è molto importante)\\
 \begin{figure}[ht] 
         \centering \includegraphics[width=0.9\columnwidth]{images/MongoCardinality.png}
         \caption{\label{fig1}Cardinalità delle relazioni; va bene così perchè card C-T è diversa da quella T-T}
 \end{figure}
-Queries tell us how to navigate relationships:
+Queries tell us how we should navigate relationships:
 \begin{enumerate}
     \item[a)] requires navigability from Customer to Transaction, to compute the sum
     \item[b)] requires to navigate from terminal to transaction, in order to compute the average, then from transaction to terminal in order to mark fraudulent transactions
@@ -85,35 +81,29 @@ NOTA: i dati di terminal non sono mai acceduti, quindi se ne stanno in una colle
 The logical data model that has been realized for addressing the requirements imposed by the proposed operations. It is mandatory the presence of the motivations that led to the generation of the data model.
 provide a data modeling to optimize the execution of the following operations
 \begin{figure}[ht] 
-        \centering \includegraphics[width=0.9\columnwidth]{images/MongoNaiveNavigability.png}
-        \caption{\label{fig1}Questa è la navigabilità naive, solo guardando le query. Poi bisogna vedere le cardinalità}
+        \centering \includegraphics[width=0.9\columnwidth]{images/MongoBaselineNavigability.png}
+        \caption{\label{fig1}Questa è la navigabilità baseline, solo guardando le query. Poi bisogna vedere le cardinalità}
 \end{figure}
 Considerazioni:
 \begin{enumerate}
     \item navigation from customer to transaction is impractical: ZILLIONS!
     \item navigation from terminal to transaction is impractical: ZILLIONS!
 \end{enumerate}
-I think we should just navigate from transactions to the other two, do things through a lookup (\textbf{in the naive case!})
+So we ignore these and just keep navigability from transaction to customer and from transaction to terminal\\
+We just navigate from transactions to the other two, do things through a lookup (\textbf{in the baseline case!})
 \\
-qui bisogna riportare tutte le query e spiegare cosa si è scelto di tenere embedded e cosa per ref. Quali query sono più importanti; spiegare che per la richiesta d) i i "kind of product" saranno a caso, mentre "period of the day" dipende dalla data generata
-\\
+\subsection{Design Patterns}
 \textbf{Prima eseguiremo le query sulle collezioni base, poi su quelle ottimizzate coi design pattern per far vedere che si va a migliorare}
-\subsection{Design Pattern}
-\textbf{questa sezione risponde alla activity 2 e al punto b) del file da inviare}
 
 \section{Ingestion Layer}
 Lo script per mettere i dati su MongoDB\\
-Scarichiamo tutte le tabelle. Creiamo file da 50MB, ciascuno col suo range di giorni (3 mesi) e li andiamo ad aggiungere incrementalmente
-\\
-\textbf{questa sezione risponde al punto c) del file da inviare}
+Scarichiamo tutte le tabelle. Creiamo file da 50MB / 100MB, ciascuno col suo range di giorni e li andiamo ad aggiungere incrementalmente
 
 \section{Queries}
-Come sono implementate le query\\
-\textbf{questa sezione risponde al punto d) del file da inviare}
+Come sono implementate le query
 
 \section{Performance}
-Valutazione performance, sia nel caso naive che nel caso ottimizzato coi pattern\\
-\textbf{questa sezione risponde al punto e) del file da inviare}
+Valutazione performance, sia nel caso naive che nel caso ottimizzato coi pattern
 
 \section{Conclusion}
 This section should be brief, concise, but complete. Directly answer your objectives, state your findings with errors, and conclude whether or not you were successful. Briefly explain if not successful.

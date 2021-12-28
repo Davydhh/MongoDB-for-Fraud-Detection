@@ -1,9 +1,11 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import random
 import time
 from os import listdir, makedirs
 from os.path import isfile, isdir, join
+from datetime import date, datetime, timedelta
 
 
 def generate_customer_profiles_table(n_customers, random_state=0):
@@ -232,6 +234,9 @@ class DatasetsGenerator:
         transactions_df = add_frauds(customer_profiles_table, terminal_profiles_table, transactions_df)
 
         self.save_datasets(customer_profiles_table, terminal_profiles_table, transactions_df)
+        # keep track of the days
+        self.start_date = datetime.strptime(self.start_date, '%Y-%M-%d') + timedelta(days=self.nb_days)
+        self.start_date = datetime.strftime(self.start_date, '%Y-%m-%d')
 
     def save_datasets(self, customer_profiles_table, terminal_profiles_table, transactions_df):
         path = "./datasets"
