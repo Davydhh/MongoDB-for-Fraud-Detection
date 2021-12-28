@@ -91,7 +91,6 @@ Considerazioni:
 \end{enumerate}
 So we ignore these and just keep navigability from transaction to customer and from transaction to terminal\\
 We just navigate from transactions to the other two, do things through a lookup (\textbf{in the baseline case!})
-\\
 \subsection{Design Patterns}
 \textbf{Prima eseguiremo le query sulle collezioni base, poi su quelle ottimizzate coi design pattern per far vedere che si va a migliorare}
 
@@ -101,6 +100,18 @@ Scarichiamo tutte le tabelle. Creiamo file da 50MB / 100MB, ciascuno col suo ran
 
 \section{Queries}
 Come sono implementate le query
+\subsection{Query A}
+
+\subsection{Query B}
+\subsection{Query C}
+\subsection{Query D}
+Ci viene richiesta una nuova relazione
+\begin{figure}[ht] 
+        \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends.png}
+        \caption{\label{fig1}Relationship}
+\end{figure}
+Notare che è \textbf{transitiva} dunque basta capire per ogni customer su quali terminal ha effettuato più di 3 transazioni dello stesso tipo, poi segnalarlo
+\subsection{Query E}
 
 \section{Performance}
 Valutazione performance, sia nel caso naive che nel caso ottimizzato coi pattern
