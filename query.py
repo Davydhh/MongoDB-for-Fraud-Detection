@@ -1,12 +1,15 @@
 import logging
+import time
+import datetime
 import random
 from ingestion import db
-import datetime
 
 
 def run_queries():
     run_query_a()
     run_query_b()
+    run_query_d()
+
 
 def run_query_a():
     logging.info("Running query a")
@@ -52,7 +55,7 @@ def run_query_a():
 
     result = db.transactions.aggregate(pipeline)
 
-    print("Query result: {}".format(list(result)))
+    print("Query a result: {}".format(list(result)))
 
     logging.info("Analyzing performance...")
 
@@ -62,7 +65,7 @@ def run_query_a():
         'cursor': {}
     }, verbosity='executionStats')
 
-    print("Performance about query: {} milliseconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
+    print("Performance about query a: {} milliseconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
         "executionStats").get("executionTimeMillis")))
 
 
@@ -168,7 +171,7 @@ def run_query_b():
 
     result = db.transactions.aggregate(pipeline)
 
-    print("Query result: {}".format(list(result)))
+    print("Query b result: {}".format(list(result)))
 
     logging.info("Analyzing performance...")
 
@@ -178,7 +181,7 @@ def run_query_b():
         'cursor': {}
     }, verbosity='executionStats')
 
-    print("Performance about query: {} milliseconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
+    print("Performance about query b: {} milliseconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
         "executionStats").get("executionTimeMillis")))
 
 
@@ -187,22 +190,48 @@ def run_query_c():
     pass
 
 
-def run_query_d(product_kind= ["high-tech", "food", "clothing", "consumable", "other"],\
-    day_period= [{"name":"night", "start":"00:00:00"}, {"name":"morning", "start":"06:00:00"}, \
-        {"name":"afternoon", "start":"12:00:00"}, {"name":"evening", "start":"18:00:00"}]):
-    logging.info("Running query d")
-    #step one: extend the model
-    def select_product(product_kind=product_kind):
-        return random.choice(product_kind)
+def run_query_d():
+    logging.info("Running query d.i.1")
+    start_time = time.time()
 
-    def select_period(time, period=day_period):
-        #suppose period ordered by 'start'
-        period_label = "null"
-        for p in period:
-            if datetime.strptime(time, "%H:%M:%S") >= datetime.strptime(p.get('start'), "%H:%M:%S"):
-                period_label = p.get('name')
-            else:
-                break
-        return period_label
-    #step two: buying_friends
-    return select_period()
+    # Point i.1
+    pipeline = [
+        {
+            "$addFields": {
+                "hour": {
+                    "$hour": {
+                        "$toDate": "$TX_DATETIME"
+                    }
+                }
+            }
+        },
+        {
+            "$addFields": {
+                "period": {
+                    "$switch": {
+                        "branches": [
+                            {"case": {"$and": [{"$gte": ["$hour", 6]}, {"$lte": ["$hour", 12]}]}, "then": "morning"},
+                            {"case": {"$and": [{"$gt": ["$hour", 12]}, {"$lte": ["$hour", 18]}]}, "then": "afternoon"},
+                            {"case": {"$and": [{"$gt": ["$hour", 18]}, {"$lte": ["$hour", 22]}]}, "then": "evening"},
+                        ],
+                        "default": "night"
+                    }
+                }
+            }
+        }
+    ]
+
+    db.transactions.update_many({}, pipeline)
+
+    print("Performance about query d.i.1: {} milliseconds\n".format((time.time() - start_time) * 1000))
+
+    # Point i.2
+    logging.info("Running query d.i.2")
+    start_time = time.time()
+
+    kinds = ["high-tech", "food", "clothing", "consumable", "other"]
+    for doc in db.transactions.find({"product_kind": {"$exists": False}}):
+        db.transactions.update({"_id": doc.get("_id")}, {"$set": {"product_kind": random.choice(kinds)}})
+
+
+    print("Performance about query d.i.2: {} milliseconds\n".format((time.time() - start_time) * 1000))
