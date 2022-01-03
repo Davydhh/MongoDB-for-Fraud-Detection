@@ -1,44 +1,49 @@
-%++++++++++++++++++++++++++++++++++++++++
-% Don't modify this section unless you know what you're doing!
-\documentclass[letterpaper,11pt]{article}
-\usepackage{natbib}
-\bibliographystyle{unsrtnat}
-\usepackage{tabularx} % extra features for tabular environment
-\usepackage{amsmath}  % improve math presentation
-\usepackage{graphicx} % takes care of graphic including machinery
-\usepackage[margin=1in,letterpaper]{geometry} % decreases margins
-%\usepackage{cite} % takes care of citations
-\usepackage[final]{hyperref} % adds hyper links inside the generated pdf file
-\hypersetup{
-	colorlinks=true,       % false: boxed links; true: colored links
-	linkcolor=blue,        % color of internal links
-	citecolor=blue,        % color of links to bibliography
-	filecolor=magenta,     % color of file links
-	urlcolor=blue         
-}
-%+++++++++++++++++++++++++++++++++++++++
+\documentclass[runningheads]{llncs}
+\usepackage{graphicx}
+\usepackage{url}
+% Used for displaying a sample figure. If possible, figure files should
+% be included in EPS format.
+%
+% If you use the hyperref package, please uncomment the following line
+% to display URLs in blue roman font according to Springer's eBook style:
+% \renewcommand\UrlFont{\color{blue}\rmfamily}
+
 \begin{document}
+\title{MongoDB for Credit Card Fraud Detection}
 
-\title{NEW GENERATION DATA MODELS AND DBMSS \\\textbf{Fraud Detection (...un titolo figo...)}}
-\author{Giussani Riccardo, Cazzetta Davide}
-\date{January 2022}
-\maketitle
+\author{Davide Cazzetta\orcidID{976585} \and Riccardo Giussani\orcidID{000000}}
 
+\authorrunning{Davide \& Riccardo}
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+\institute{Università degli Studi di Milano Statale, Milan MI 20133, Italy \\
+\url{https://www.unimi.it/it/corsi/corsi-di-laurea/informatica-magistrale}}
+%
+\maketitle              % typeset the header of the contribution
+%
 \begin{abstract}
-Due righe sul tipo di problema, sul perchè abbiamo scelto mongo; cose belle di Mongo... 
-\textbf{ultima cosa da fare}
+The abstract should briefly summarize the contents of the paper in
+150--250 words.
+
+\keywords{First keyword  \and Second keyword \and Another keyword.}
 \end{abstract}
 
 \section{Introduction}
+
 \subsection{Motivation}
+
+Payment card fraud is a major challenge for business owners, payment card issuers, and transactional services companies, causing every year substantial and growing financial losses. Many Machine Learning approaches have been proposed in the literature that tries to automate the process of identifying fraudulent patterns from large volumes of data. The focus of this project aims at this last part: we exploit some algorithms that generate data about transactions to store these data into a NoSQL Database, specifically MongoDB\footnote{https://www.mongodb.com/}. In detail we want to see how does this system behave in the presence of large amount of data, evaluating the execution times for some operations.
+
 \subsection{Conceptual Model}
+
 \begin{enumerate}
     \item ref allo script e due parole sul problema
     \item UML, constraints e supposizioni
 \end{enumerate}
 explanations, motivations, constraints, and any other information that allows understanding the design carried out.
 \\
-\begin{figure}[ht] 
+\begin{figure}[!htb] 
         \centering \includegraphics[width=0.9\columnwidth]{images/FraudDetectionUML.png}
         \caption{\label{fig1}Questo è UML dei dati come vengono generati dallo script}
 \end{figure}
@@ -64,9 +69,9 @@ Constraints e supposizioni:
 \section{Logical Model}
 \subsection{Baseline Model}
 Essendo Transactions un'entità centrale, scegliamo di trattarla come entità (nel senso, è una relazione ma è molto importante)\\
-\begin{figure}[ht] 
+\begin{figure}[!htb] 
         \centering \includegraphics[width=0.9\columnwidth]{images/MongoCardinality.png}
-        \caption{\label{fig1}Cardinalità delle relazioni; va bene così perchè card C-T è diversa da quella T-T}
+        \caption{\label{fig2}Cardinalità delle relazioni; va bene così perchè card C-T è diversa da quella T-T}
 \end{figure}
 Queries tell us how we should navigate relationships:
 \begin{enumerate}
@@ -80,9 +85,9 @@ NOTA: i dati di terminal non sono mai acceduti, quindi se ne stanno in una colle
 \\
 The logical data model that has been realized for addressing the requirements imposed by the proposed operations. It is mandatory the presence of the motivations that led to the generation of the data model.
 provide a data modeling to optimize the execution of the following operations
-\begin{figure}[ht] 
+\begin{figure}[!htb] 
         \centering \includegraphics[width=0.9\columnwidth]{images/MongoBaselineNavigability.png}
-        \caption{\label{fig1}Questa è la navigabilità baseline, solo guardando le query. Poi bisogna vedere le cardinalità}
+        \caption{\label{fig3}Questa è la navigabilità baseline, solo guardando le query. Poi bisogna vedere le cardinalità}
 \end{figure}
 Considerazioni:
 \begin{enumerate}
@@ -95,20 +100,54 @@ We just navigate from transactions to the other two, do things through a lookup 
 \textbf{Prima eseguiremo le query sulle collezioni base, poi su quelle ottimizzate coi design pattern per far vedere che si va a migliorare}
 
 \section{Ingestion Layer}
-Lo script per mettere i dati su MongoDB\\
-Scarichiamo tutte le tabelle. Creiamo file da 50MB / 100MB, ciascuno col suo range di giorni e li andiamo ad aggiungere incrementalmente
+
+The ingestion layer is responsable for generating the datasets which will then be stored in MongoDB.
+
+\subsection{Generate datasets}
+
+The system can generate three datasets, one about customers, one related to terminals and the third regarding transactions. To generate these datasets we have exploited the scripts presented in this article: \url{fraud-detection-handbook.github.io/fraud-detection-handbook/Chapter_3_GettingStarted/SimulatedDataset.html}. In particular we have created a class \emph{DatasetsGenerator} where the user can pass the parameters \emph{start\_date} which represents the day on which transactions begin and \emph{nb\_days}, that is days of transactions. The decision to make only these two parameters arbitrary is due to the fact that the biggest dataset is about transactions, on the other hand the customers and terminals dataset are are much smaller in comparison, as a result, the customer and terminal parameters are constant at 5000 and 10000 respectively.
+\\
+The objective of the work is to generate three datasets each composed of the three datasets described above, to do this we started with a base of 5000 customers, 10000 terminals and 180 days of transactions (starting from the date 2018-04-01) and then, at each iteration, the start date is increased by one year and the days of transactions are doubled. The following datasets were generated in this way:
+
+\begin{enumerate}
+    \item \begin{itemize}
+        \item customers: 3 MB
+        \item terminals: 1 MB
+        \item transactions (2018): 330 MB
+    \end{itemize}
+    \item \begin{itemize}
+        \item customers: 3 MB
+        \item terminals: 1 MB
+        \item transactions (2019): 670 MB
+    \end{itemize}
+    \item \begin{itemize}
+        \item customers: 3 MB
+        \item terminals: 1 MB
+        \item transactions (2020): 1.3 GB
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Store data in MongoDB}
+
+The second part of the ingestion layer consists of saving the data in MongoDB. The datasets are generated in json format to facilitate saving in the database; in fact the data are stored with the \emph{updateMany\footnote{https://docs.mongodb.com/manual/reference/method/db.collection.updateMany/}} method. In particular, transaction data are saved at each iteration, whereas customer and terminal datasets are only saved at the first iteration as they are the same for all three generated datasets.
+
+\subsubsection{Design Patterns}
 
 \section{Queries}
-Come sono implementate le query
+
+This section explains in detail how the queries were implemented to obtain the required results.
+
 \subsection{Query A}
+
+For each customer identifies the amount that he/she has spent for every day of the current month.
 
 \subsection{Query B}
 \subsection{Query C}
 \subsection{Query D}
 Ci viene richiesta una nuova relazione
-\begin{figure}[ht] 
+\begin{figure}[!htb] 
         \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends.png}
-        \caption{\label{fig1}Relationship}
+        \caption{\label{fig4}Relationship}
 \end{figure}
 Notare che è \textbf{transitiva} dunque basta capire per ogni customer su quali terminal ha effettuato più di 3 transazioni dello stesso tipo, poi segnalarlo
 \subsection{Query E}
@@ -118,18 +157,5 @@ Valutazione performance, sia nel caso naive che nel caso ottimizzato coi pattern
 
 \section{Conclusion}
 This section should be brief, concise, but complete. Directly answer your objectives, state your findings with errors, and conclude whether or not you were successful. Briefly explain if not successful.
-
-\begin{thebibliography}{99}
-
-\bibitem[\protect\citeauthoryear{Author}{2010}]{Author2010}
-Author, A.N and Another, A. N., 2010, MNRAS, 431, 28.
-
-\end{thebibliography}
-
-\appendix
-
-\section*{Appendice: Niente}
-
-Prova
 
 \end{document}
