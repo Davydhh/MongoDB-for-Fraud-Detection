@@ -8,6 +8,7 @@ from ingestion import db
 def run_queries():
     run_query_a()
     run_query_b()
+    run_query_c()
     run_query_d()
 
 
@@ -271,3 +272,59 @@ def run_query_d():
 
 
     print("Performance about query d.i.2: {} milliseconds\n".format((time.time() - start_time) * 1000))
+
+    # point ii
+    logging.info("Running query d.i.2")
+    start_time = time.time()
+
+    pipeline = [
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "ter": "$_id.ter", "prod": "$_id.prod"
+            },
+            "buying_friends": {
+                "$addToSet": "$_id.cust"
+            }
+        }
+    }]
+
+
+    result = db.transactions.aggregate(pipeline, allowDiskUse = True)
+
+    print("Performance about query d.ii: {} milliseconds\n".format((time.time() - start_time) * 1000))
+
+
+def run_query_e():
+    logging.info("Running query e")
+    start_time = time.time()
+
+    pipeline = [
+    {
+        "$group": {
+            "_id":"$period", 
+            "n_transactions":{"$sum": 1}, 
+            "avg_fraudulent":{"$avg": "$TX_FRAUD"}
+        }
+    }]
+
+    result = db.transactions.aggregate(pipeline)
+
+    print("Performance about query d.ii: {} milliseconds\n".format((time.time() - start_time) * 1000))
