@@ -10,6 +10,7 @@ def run_queries():
     run_query_b()
     run_query_c()
     run_query_d()
+    run_query_e()
 
 
 def run_query_a():
@@ -308,6 +309,17 @@ def run_query_d():
 
 
     result = db.transactions.aggregate(pipeline, allowDiskUse = True)
+
+    db.customer.update_many({}, {'$set': {'buying_friends': []}})
+
+    # explicit representation of the relationship
+    for r in result:
+        for c in r['buying_friends']:
+            db.customer.update_one({'CUSTOMER_ID': c},\
+                {'$push': {'buying_friends': {\
+                    'terminal': r['_id'].get('ter'),\
+                    'product_kind':r['_id'].get('prod'),\
+                    'customers':list(set(r['buying_friends']) - {c})}}})
 
     print("Performance about query d.ii: {} milliseconds\n".format((time.time() - start_time) * 1000))
 
