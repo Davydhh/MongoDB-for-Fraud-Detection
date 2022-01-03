@@ -201,8 +201,29 @@ def run_query_c():
     ]
 
     result = db.transactions.aggregate(pipeline)
-    
-    pass
+    co_customers = []
+    for t_1 in result:
+        for t_2 in result:
+            if t_1["_id"] > t_2["_id"]:
+                t_1_and_t_2 = set(t_1["cust_used_once"]) & set(t_2["cust_used_once"])
+                t_1_not_t_2 = set(t_1["cust_used_once"]) - set(t_2["cust_used_once"])
+                t_2_not_t_1 = set(t_2["cust_used_once"]) - set(t_1["cust_used_once"])
+                print('after initialization')
+
+                if len(t_1_and_t_2) > 1:
+                    for c_1 in t_1_not_t_2:
+                        for c_2 in t_2_not_t_1:
+                            co_customers.append({c_1, c_2})
+                    
+                    if len(t_1_and_t_2) > 2:
+                        for c_1 in t_1_and_t_2:
+                            for c_2 in t_1_and_t_2:
+                                if c_1 != c_2:
+                                    co_customers.append({c_1, c_2}) # a customer cannot be co-customer to himself
+
+    print("Performance about query c: {} milliseconds\n".format((time.time() - start_time) * 1000))
+
+    return(co_customers)
 
 
 def run_query_d():
