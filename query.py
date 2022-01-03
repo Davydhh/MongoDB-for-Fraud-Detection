@@ -187,6 +187,21 @@ def run_query_b():
 
 def run_query_c():
     logging.info("Running query c")
+    start_time = time.time()
+
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$TERMINAL_ID",
+                "cust_used_once": {
+                    "$addToSet": "$CUSTOMER_ID"
+                }
+            }
+        }
+    ]
+
+    result = db.transactions.aggregate(pipeline)
+    
     pass
 
 
