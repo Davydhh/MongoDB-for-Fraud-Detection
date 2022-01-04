@@ -143,15 +143,53 @@ For each customer identifies the amount that he/she has spent for every day of t
 
 \subsection{Query B}
 \subsection{Query C}
+We consider only co-customers of degree 3, as MongoDB is not performative when it comes to graph traversal. There's a graphLookup aggregation stage, but...\\
+I opted for an insiemistic approach. From the terminal collection I retrieve for each terminal the customers that had used that terminal at least once. Here the power of MongoDB stops and I had to use Python functionalities.\\
+Consider that a customer cannot be co-customer to himself.\\
+Immagine della catena***\\
+eulero-venn diagram to explain.\\
+t1: used t1 at least once\\
+t2: used t2 at least once\\
+t1-not-t2 are co-customers to t2-not-t1 if intersection is not empty,
+I can create a path!\\
+Of course all 3 sets have empty intersection\\
+If intersection contains more than 2 customers, then all customers in t1-and-t2 are co-customers.\\
+For each pair of terminals I generate those three sets and play.
 \subsection{Query D}
-Ci viene richiesta una nuova relazione
+\subsubsection{part 1}
+Add information
+\paragraph{add period}
+\paragraph{add product kind}
+\subsubsection{part 2}
+Note that this relationship among customers depends on the terminal and the product kind. Fixed those, the relationship is transitive, symmetric and reflexive.\\
+Being transitive, I just need to put together in a list all those customers that have the characteristic\\
 \begin{figure}[!htb] 
-        \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends.png}
-        \caption{\label{fig4}Relationship}
+        \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends_base.png}
+        \caption{\label{fig4}buying friend Relationship}
 \end{figure}
-Notare che è \textbf{transitiva} dunque basta capire per ogni customer su quali terminal ha effettuato più di 3 transazioni dello stesso tipo, poi segnalarlo
-\subsection{Query E}
+\begin{figure}[!htb] 
+        \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends_all.png}
+        \caption{\label{fig4}buying friend Relationship, not constrained by terminal and kind}
+\end{figure}
+\begin{figure}[!htb] 
+        \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends_group.png}
+        \caption{\label{fig4}buying group relationship}
+\end{figure}
+Taking into account the transaction collection, I group by customer, terminal and product kind, then count the number of occurrences. This gives us, for each customer, the number of times they bought a product of a kind in a terminal. Then I match only those that have a count greater than 3, as assigned.\\
+Then again I group by terminal and kind: as accumulator function, I used the addToSet with the customer id, therefore I obtain the set (without duplication) of buying-friends.\\
+As first implementation, I decided, for each customer, to embed all documents with the list of ids of buying friends (specifying terminal and kind) as we expect that the typical query will be "given a customer return all buying-friends" (perhaps also given terminal and/or kind)\\
+**put cardinalities here**\\
+\paragraph{ragionamento}
+Fissati terminal e product kind, ogni customer ha in media 25 buying friends, con un massimo di 49. In linea teorica si potrebbe fare embedding dei customer id degli amici.\\
+Il problema è che un customer è buying friend in riferimento a molte combinazioni di terminal e kind: in totale ogni customer ha in media 6552 buying friends con un massimo di 15103. Ci possono essere due customers buying friends in riferimento a più combinazioni, ma questo deve essere comunque riportato.\\
+Inoltre la relazione può solo crescere in cardinalità: ogni volta che un customer esegue una quarta transazione sullo stesso terminal con lo stesso kind, diventa amico di tutti gli altri customers che han fatto lo stesso e sono tutti amici tra loro.\\
+Può essere utile creare una collezione \textbf{buying group} con TERMINAL ID, product kind e la lista degli id dei customer in quel gruppo.\\
+Sarebbe più scalabile, ma non risponde a quella che io penso essere la query più probabile su buying friends, ossia:\\
+\textit{dato un customer (ed eventualmente terminal e/o product kind), restituire tutti i suoi buying friends}\\
+Quindi dobbiamo capire come rappresentarla
 
+\subsection{Query E}
+This query involves a simple group stage in aggregation, where I use two accumulators: a count, for number of transactions, and an average, for fraudulent transactions.
 \section{Performance}
 Valutazione performance, sia nel caso naive che nel caso ottimizzato coi pattern
 
