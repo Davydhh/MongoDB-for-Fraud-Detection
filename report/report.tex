@@ -139,9 +139,32 @@ This section explains in detail how the queries were implemented to obtain the r
 
 \subsection{Query A}
 
-For each customer identifies the amount that he/she has spent for every day of the current month.
+\emph{For each customer identifies the amount that he/she has spent for every day of the current month.}
+
+\hfill
+
+\noindent
+Since with have noticed that the \emph{TX\_DATETIME} field is saved in Mongo in milliseconds as type Int the first step is convert this field into Datetime format in order extract days and months from the date. The  convertion into Datetime type was made with the \emph{\$toDate\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/toDate/}} method inside a \emph{\$project\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/project/}} stage and then we have extracted the day and the month with the \emph{\$dayOfMonth\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/dayOfMonth/}} and \emph{\$month\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/month/}} methods respectively.\\
+The second step is filter data about the current month through a \emph{\$match} stage; to obtain the current month the \emph{datetime\footnote{https://docs.python.org/3/library/datetime.html}} Python library has been used.\\
+The last step consists in grouping the data by user and by day by summing the \emph{TX\_AMOUNT} field with the \emph{\$group\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/group/}} and \emph{\$sum\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/sum/}} methods.
+
+The resulting query consists of a pipeline aggregation on the transactions collection.
 
 \subsection{Query B}
+
+\emph{For each terminal identify the possible fraudulent transactions. The fraudulent transactions
+are those whose import is higher than 50\% of the average import of the transactions
+executed on the same terminal in the last month.}
+
+\hfill
+
+\noindent
+Since for each terminal we need to have all transactions, the \emph{\$lookup\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/lookup/}} method, starting from the terminals collection with the transactions collection, is very useful for this purpose. After that we have created another field (in a \emph{\$project} stage) named \emph{transactions\_avg} which we could process to calculate the average import of the transactions. Specifically, as a first step we eliminated the terminals that had no transactions in the last 30 days through a \emph{\$match} method where the last 30 days were obtained again through the \emph{datetime} library, than the method \emph{\$filter\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/filter/}} inside a \emph{\$project} stage was used to get only the transactions executed in the last month. At this point it was possible to obtain the value relative to 50\% of the average import of the transactions with the \emph{\$avg} and \emph{\$divide\footnote{https://docs.mongodb.com/manual/reference/operator/aggregation/divide/}} methods.\\
+Finally, the last operations to be carried out served to obtain the fraudulent transactions because for each terminal we now have the reference to the threshold value; a \emph{\$match} and \emph{\$project} stages are exploited to get only transactions whose import is higher than the \emph{transactions\_avg} field.\\
+
+The resulting query consists of a pipeline aggregation on the terminals collection.
+
+
 \subsection{Query C}
 We consider only co-customers of degree 3, as MongoDB is not performative when it comes to graph traversal. There's a graphLookup aggregation stage, but...\\
 I opted for an insiemistic approach. From the terminal collection I retrieve for each terminal the customers that had used that terminal at least once. Here the power of MongoDB stops and I had to use Python functionalities.\\
@@ -169,11 +192,11 @@ Being transitive, I just need to put together in a list all those customers that
 \end{figure}
 \begin{figure}[!htb] 
         \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends_all.png}
-        \caption{\label{fig4}buying friend Relationship, not constrained by terminal and kind}
+        \caption{\label{fig5}buying friend Relationship, not constrained by terminal and kind}
 \end{figure}
 \begin{figure}[!htb] 
         \centering \includegraphics[width=0.5\columnwidth]{images/buyingFriends_group.png}
-        \caption{\label{fig4}buying group relationship}
+        \caption{\label{fig6}buying group relationship}
 \end{figure}
 Taking into account the transaction collection, I group by customer, terminal and product kind, then count the number of occurrences. This gives us, for each customer, the number of times they bought a product of a kind in a terminal. Then I match only those that have a count greater than 3, as assigned.\\
 Then again I group by terminal and kind: as accumulator function, I used the addToSet with the customer id, therefore I obtain the set (without duplication) of buying-friends.\\
