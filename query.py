@@ -187,7 +187,7 @@ def run_query_b():
         "executionStats").get("executionTimeMillis")))
 
 
-def run_query_c():
+def run_query_c(target_customer=0):
     logging.info("Running query c")
     start_time = time.time()
 
@@ -206,22 +206,18 @@ def run_query_c():
     co_customers = []
     for t_1 in result:
         for t_2 in result:
-            if t_1["_id"] > t_2["_id"]:
+            if (t_1["_id"] > t_2["_id"]) and (target_customer in t_1["cust_used_once"]):
                 t_1_and_t_2 = set(t_1["cust_used_once"]) & set(t_2["cust_used_once"])
-                t_1_not_t_2 = set(t_1["cust_used_once"]) - set(t_2["cust_used_once"])
                 t_2_not_t_1 = set(t_2["cust_used_once"]) - set(t_1["cust_used_once"])
-                print('after initialization')
 
-                if len(t_1_and_t_2) > 1:
-                    for c_1 in t_1_not_t_2:
-                        for c_2 in t_2_not_t_1:
-                            co_customers.append({c_1, c_2})
+                if len(t_1_and_t_2) > 0:
+                    for c_2 in t_2_not_t_1:
+                            co_customers.append(c_2)
                     
-                    if len(t_1_and_t_2) > 2:
-                        for c_1 in t_1_and_t_2:
-                            for c_2 in t_1_and_t_2:
-                                if c_1 != c_2:
-                                    co_customers.append({c_1, c_2}) # a customer cannot be co-customer to himself
+                    if len(t_1_and_t_2) > 1:
+                        for c_2 in t_1_and_t_2:
+                                if target_customer != c_2:
+                                    co_customers.append(c_2)
 
     print("Performance about query c: {} milliseconds\n".format((time.time() - start_time) * 1000))
 
@@ -269,7 +265,7 @@ def run_query_d():
 
     kinds = ["high-tech", "food", "clothing", "consumable", "other"]
     for doc in db.transactions.find({"product_kind": {"$exists": False}}):
-        db.transactions.update({"_id": doc.get("_id")}, {"$set": {"product_kind": random.choice(kinds)}})
+        db.transactions.update_one({"_id": doc.get("_id")}, {"$set": {"product_kind": random.choice(kinds)}})
 
 
     print("Performance about query d.i.2: {} milliseconds\n".format((time.time() - start_time) * 1000))
