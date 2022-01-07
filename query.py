@@ -50,14 +50,12 @@ def run_query_a():
                     '$sum': '$TX_AMOUNT'
                 }
             }
-        }, {
-            "$limit": 10
         }
     ]
 
-    result = db.transactions.aggregate(pipeline)
+    db.transactions.aggregate(pipeline)
 
-    print("Query a result: {}".format(list(result)))
+    logging.info("Query a executed")
 
     logging.info("Analyzing performance...")
 
@@ -67,8 +65,8 @@ def run_query_a():
         'cursor': {}
     }, verbosity='executionStats')
 
-    print("Performance about query a: {} milliseconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
-        "executionStats").get("executionTimeMillis")))
+    print("Performance about query a: {} seconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
+        "executionStats").get("executionTimeMillis") / 1000))
 
 
 def run_query_b():
@@ -165,15 +163,12 @@ def run_query_b():
                 },
                 'TERMINAL_ID': 1
             }
-        },
-        {
-            "$limit": 1
         }
     ]
 
-    result = db.transactions.aggregate(pipeline)
+    db.transactions.aggregate(pipeline)
 
-    print("Query b result: {}".format(list(result)))
+    logging.info("Query b executed")
 
     logging.info("Analyzing performance...")
 
@@ -183,8 +178,8 @@ def run_query_b():
         'cursor': {}
     }, verbosity='executionStats')
 
-    print("Performance about query b: {} milliseconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
-        "executionStats").get("executionTimeMillis")))
+    print("Performance about query b: {} seconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
+        "executionStats").get("executionTimeMillis") / 1000))
 
 
 def run_query_c(target_customer=0):
@@ -203,6 +198,7 @@ def run_query_c(target_customer=0):
     ]
 
     result = db.transactions.aggregate(pipeline)
+
     co_customers = []
     for t_1 in result:
         for t_2 in result:
@@ -212,16 +208,16 @@ def run_query_c(target_customer=0):
 
                 if len(t_1_and_t_2) > 0:
                     for c_2 in t_2_not_t_1:
-                            co_customers.append(c_2)
-                    
+                        co_customers.append(c_2)
+
                     if len(t_1_and_t_2) > 1:
                         for c_2 in t_1_and_t_2:
-                                if target_customer != c_2:
-                                    co_customers.append(c_2)
+                            if target_customer != c_2:
+                                co_customers.append(c_2)
 
-    print("Performance about query c: {} milliseconds\n".format((time.time() - start_time) * 1000))
+    logging.info("Query c executed")
 
-    return(co_customers)
+    print("Performance about query c: {} seconds\n".format(time.time() - start_time))
 
 
 def run_query_d():
@@ -257,7 +253,9 @@ def run_query_d():
 
     db.transactions.update_many({}, pipeline)
 
-    print("Performance about query d.i.1: {} milliseconds\n".format((time.time() - start_time) * 1000))
+    logging.info("Query d.i.1 executed")
+
+    print("Performance about query d.i.1: {} seconds\n".format(time.time() - start_time))
 
     # Point i.2
     logging.info("Running query d.i.2")
@@ -267,72 +265,84 @@ def run_query_d():
     for doc in db.transactions.find({"product_kind": {"$exists": False}}):
         db.transactions.update_one({"_id": doc.get("_id")}, {"$set": {"product_kind": random.choice(kinds)}})
 
+    logging.info("Query d.i.2 executed")
 
-    print("Performance about query d.i.2: {} milliseconds\n".format((time.time() - start_time) * 1000))
+    print("Performance about query d.i.2: {} seconds\n".format(time.time() - start_time))
 
     # point ii
     logging.info("Running query d.ii")
     start_time = time.time()
 
     pipeline = [
-    {
-        "$group": {
-            "_id": {
-                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
-            },
-            "count": {
-                "$sum": 1
+        {
+            "$group": {
+                "_id": {
+                    "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+                },
+                "count": {
+                    "$sum": 1
+                }
             }
-        }
-    },
-    {
-        "$match": {
-            "count": {
-                "$gt": 3
+        },
+        {
+            "$match": {
+                "count": {
+                    "$gt": 3
+                }
             }
-        }
-    },
-    {
-        "$group": {
-            "_id": {
-                "ter": "$_id.ter", "prod": "$_id.prod"
-            },
-            "buying_friends": {
-                "$addToSet": "$_id.cust"
+        },
+        {
+            "$group": {
+                "_id": {
+                    "ter": "$_id.ter", "prod": "$_id.prod"
+                },
+                "buying_friends": {
+                    "$addToSet": "$_id.cust"
+                }
             }
-        }
-    }]
+        }]
 
-
-    result = db.transactions.aggregate(pipeline, allowDiskUse = True)
+    result = db.transactions.aggregate(pipeline, allowDiskUse=True)
 
     db.customer.update_many({}, {'$set': {'buying_friends': []}})
 
     # explicit representation of the relationship
     for r in result:
         for c in r['buying_friends']:
-            db.customer.update_one({'CUSTOMER_ID': c},\
-                {'$push': {'buying_friends': {\
-                    'terminal': r['_id'].get('ter'),\
-                    'product_kind':r['_id'].get('prod'),\
-                    'customers':list(set(r['buying_friends']) - {c})}}})
+            db.customer.update_one({'CUSTOMER_ID': c}, \
+                                   {'$push': {'buying_friends': { \
+                                       'terminal': r['_id'].get('ter'), \
+                                       'product_kind': r['_id'].get('prod'), \
+                                       'customers': list(set(r['buying_friends']) - {c})}}})
 
-    print("Performance about query d.ii: {} milliseconds\n".format((time.time() - start_time) * 1000))
+    logging.info("Query d.ii executed")
+
+    print("Performance about query d.ii: {} seconds\n".format(time.time() - start_time))
 
 
 def run_query_e():
     logging.info("Running query e")
-    start_time = time.time()
 
     pipeline = [
-    {
-        "$group": {
-            "_id":"$period", 
-            "n_transactions": {"$sum": 1},
-            "avg_fraudulent": {"$avg": "$TX_FRAUD"}
-        }
-    }]
+        {
+            "$group": {
+                "_id": "$period",
+                "n_transactions": {"$sum": 1},
+                "avg_fraudulent": {"$avg": "$TX_FRAUD"}
+            }
+        }]
 
-    result = db.transactions.aggregate(pipeline)
+    db.transactions.aggregate(pipeline)
 
-    print("Performance about query e: {} milliseconds\n".format((time.time() - start_time) * 1000))
+    logging.info("Query e exected")
+
+    logging.info("Analyzing performance...")
+
+    performance_result = db.command('explain', {
+        'aggregate': "transactions",
+        'pipeline': pipeline,
+        'cursor': {}
+    }, verbosity='executionStats')
+
+    print("Performance about query e: {} seconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
+        "executionStats").get("executionTimeMillis") / 1000))
