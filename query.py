@@ -271,7 +271,7 @@ def run_query_d():
     print("Performance about query d.i.2: {} milliseconds\n".format((time.time() - start_time) * 1000))
 
     # point ii
-    logging.info("Running query d.i.2")
+    logging.info("Running query d.ii")
     start_time = time.time()
 
     pipeline = [
@@ -328,11 +328,11 @@ def run_query_e():
     {
         "$group": {
             "_id":"$period", 
-            "n_transactions":{"$sum": 1}, 
-            "avg_fraudulent":{"$avg": "$TX_FRAUD"}
+            "n_transactions": {"$sum": 1},
+            "avg_fraudulent": {"$avg": "$TX_FRAUD"}
         }
     }]
 
     result = db.transactions.aggregate(pipeline)
 
-    print("Performance about query d.ii: {} milliseconds\n".format((time.time() - start_time) * 1000))
+    print("Performance about query e: {} milliseconds\n".format((time.time() - start_time) * 1000))
