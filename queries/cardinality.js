@@ -9,6 +9,7 @@ db.customer.aggregate([
         }
     }
 ])
+// max: 106 ; avg: 75.20
 
 // average cardinality of 'available_terminal' relationship Customer side
 db.customer.aggregate([
@@ -23,7 +24,7 @@ db.customer.aggregate([
 ])
 
 // max number of transactions per customer
-db.transaction.aggregate([
+db.transactions.aggregate([
     {
         $group: {
             _id: "$CUSTOMER_ID",
@@ -41,9 +42,12 @@ db.transaction.aggregate([
         }
     }
 ])
+// 2018: max: 179, avg: 77
+// 2018+2019: max: 520, avg: 231  
+// 2018+2019+2020: max: 1200, avg: 538
 
 // average number of transactions per customer
-db.transaction.aggregate([
+db.transactions.aggregate([
     {
         $group: {
             _id: "$CUSTOMER_ID",
@@ -63,7 +67,7 @@ db.transaction.aggregate([
 ])
 
 // max number of transactions per terminal
-db.transaction.aggregate([
+db.transactions.aggregate([
     {
         $group: {
             _id: "$TERMINAL_ID",
@@ -81,9 +85,12 @@ db.transaction.aggregate([
         }
     }
 ])
+// 2018: max: 95, avg: 38
+// 2018+2019: max: 263, avg: 115
+// 2018+2019+2020: max: 586, avg: 268
 
 // average number of transactions per terminal
-db.transaction.aggregate([
+db.transactions.aggregate([
     {
         $group: {
             _id: "$TERMINAL_ID",
@@ -123,6 +130,7 @@ db.customer.aggregate([
         }
     }
 ])
+// max: 63, 37
 
 // average cardinality of 'available_terminal' relationship Terminal side
 db.customer.aggregate([
