@@ -71,6 +71,7 @@ def run_query_a():
 
 def run_query_b():
     logging.info("Running query b")
+    start_time = time.time()
 
     now = datetime.datetime.utcnow()
 
@@ -170,16 +171,73 @@ def run_query_b():
 
     logging.info("Query b executed")
 
-    logging.info("Analyzing performance...")
+    print("Performance about query b: {} seconds\n".format(time.time() - start_time))
 
-    performance_result = db.command('explain', {
-        'aggregate': "transactions",
-        'pipeline': pipeline,
-        'cursor': {}
-    }, verbosity='executionStats')
 
-    print("Performance about query b: {} seconds\n".format(performance_result.get("stages")[0].get("$cursor").get(
-        "executionStats").get("executionTimeMillis") / 1000))
+def run_query_b_splitted():
+    logging.info("Running query b splitted")
+
+    start_time = time.time()
+
+    now = datetime.datetime.utcnow()
+
+    last_30d = (now - datetime.timedelta(days=30)).timestamp() * 1000
+
+    pipeline = [
+        {
+            '$match': {
+                'TX_DATETIME': {
+                    '$gt': last_30d
+                }
+            }
+        }, {
+            '$group': {
+                '_id': '$TERMINAL_ID',
+                'avg': {
+                    '$avg': '$TX_AMOUNT'
+                }
+            }
+        }, {
+            '$project': {
+                'avg': {
+                    '$divide': [
+                        '$avg', 2
+                    ]
+                }
+            }
+        }
+    ]
+
+    result = db.transactions.aggregate(pipeline)
+
+    thresholds = {}
+
+    for doc in result:
+        thresholds[doc["_id"]] = doc["avg"]
+
+    pipeline = [
+        {
+            '$lookup': {
+                'from': 'transactions',
+                'localField': 'TERMINAL_ID',
+                'foreignField': 'TERMINAL_ID',
+                'as': 'transactions'
+            }
+        }
+    ]
+
+    result = db.terminals.aggregate(pipeline)
+
+    fraudolent_transactions = {}
+
+    for doc in result:
+        fraudolent_transactions["TERMINAL_ID"] = doc["TERMINAL_ID"]
+        fraudolent_transactions["transactions"] = [t for t in doc["transactions"] if
+                                                   t["TX_DATETIME"] > thresholds[doc["TERMINAL_ID"]]]
+
+    logging.info("Query b splitted executed")
+
+    print("Performance about query b splitted: {} seconds\n".format(time.time() - start_time))
 
 
 def run_query_c(target_customer=0):
