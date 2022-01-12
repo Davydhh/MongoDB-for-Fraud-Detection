@@ -255,27 +255,26 @@ def run_query_c(target_customer=0):
         }
     ]
 
-    result = db.transactions.aggregate(pipeline)
+    terminals_all = db.transactions.aggregate(pipeline)
+    terminals_target = db.transactions.aggregate(pipeline + [{"$match": {"cust_used_once":target_customer}}])
 
-    co_customers = []
-    for t_1 in result:
-        for t_2 in result:
-            if (t_1["_id"] > t_2["_id"]) and (target_customer in t_1["cust_used_once"]):
-                t_1_and_t_2 = set(t_1["cust_used_once"]) & set(t_2["cust_used_once"])
-                t_2_not_t_1 = set(t_2["cust_used_once"]) - set(t_1["cust_used_once"])
+    co_customers = set()
+    for t_1 in terminals_target:
+        for t_2 in terminals_all:
+            t_1_and_t_2 = (set(t_1["cust_used_once"]) & set(t_2["cust_used_once"])) - {target_customer}
+            t_2_not_t_1 = set(t_2["cust_used_once"]) - set(t_1["cust_used_once"])
 
-                if len(t_1_and_t_2) > 0:
-                    for c_2 in t_2_not_t_1:
-                        co_customers.append(c_2)
+            if len(t_1_and_t_2) > 0:
+                co_customers.update(t_2_not_t_1)
 
-                    if len(t_1_and_t_2) > 1:
-                        for c_2 in t_1_and_t_2:
-                            if target_customer != c_2:
-                                co_customers.append(c_2)
+                if len(t_1_and_t_2) > 1:
+                    co_customers.update(t_1_and_t_2)
 
     logging.info("Query c executed")
 
     print("Performance about query c: {} seconds\n".format(time.time() - start_time))
+
+    return(co_customers)
 
 
 def run_query_d():
