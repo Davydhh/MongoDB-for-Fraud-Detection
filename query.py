@@ -278,6 +278,7 @@ def run_query_c(target_customer=0):
 
 
 def run_query_d():
+    random.seed(0)
     logging.info("Running query d.i.1")
     start_time = time.time()
 
@@ -308,7 +309,7 @@ def run_query_d():
         }
     ]
 
-    db.transactions.update_many({}, pipeline)
+    db.transactions.update_many({"period": {"$exists": False}}, pipeline)
 
     logging.info("Query d.i.1 executed")
 
@@ -319,8 +320,8 @@ def run_query_d():
     start_time = time.time()
 
     kinds = ["high-tech", "food", "clothing", "consumable", "other"]
-    for doc in db.transactions.find({"product_kind": {"$exists": False}}):
-        db.transactions.update_one({"_id": doc.get("_id")}, {"$set": {"product_kind": random.choice(kinds)}})
+    db.transactions.update_many({"product_kind": {"$exists": False}}, \
+        {"$set": {"product_kind": random.choice(kinds)}})
 
     logging.info("Query d.i.2 executed")
 
@@ -361,16 +362,11 @@ def run_query_d():
 
     result = db.transactions.aggregate(pipeline, allowDiskUse=True)
 
-    db.customer.update_many({}, {'$set': {'buying_friends': []}})
-
     # explicit representation of the relationship
     for r in result:
-        for c in r['buying_friends']:
-            db.customer.update_one({'CUSTOMER_ID': c}, \
-                                   {'$push': {'buying_friends': { \
-                                       'terminal': r['_id'].get('ter'), \
-                                       'product_kind': r['_id'].get('prod'), \
-                                       'customers': list(set(r['buying_friends']) - {c})}}})
+        db.buying_groups.update_many({'terminal': r['_id'].get('ter'), \
+                                    'product_kind': r['_id'].get('prod')}, \
+            {"$addToSet": {"buying_friends": {"$each": r['buying_friends']}}}, upsert=True)
 
     logging.info("Query d.ii executed")
 
