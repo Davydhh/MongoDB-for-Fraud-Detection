@@ -6,14 +6,42 @@ from ingestion import db
 
 
 def run_queries():
-    run_query_a()
+    date = get_current_date()
+    run_query_a(date)
     run_query_b()
     run_query_c()
     run_query_d()
     run_query_e()
 
+def get_current_date():
+    pipeline = [
+        {
+            '$project': {
+                'TX_DATETIME': {
+                    '$toDate': '$TX_DATETIME'
+                }
+            }
+        }, {
+            '$group': {
+                '_id': None, 
+                'current_day': {
+                    '$max': '$TX_DATETIME'
+                }
+            }
+        }, {
+            '$project': {
+                '_id': 0,
+                'current_day': 1
+            }
+        }
+    ]
 
-def run_query_a():
+    result = db.transactions.aggregate(pipeline).next()['current_day']
+    
+    return(result)
+
+
+def run_query_a(date):
     logging.info("Running query a")
 
     pipeline = [
@@ -38,7 +66,7 @@ def run_query_a():
             }
         }, {
             '$match': {
-                'month': datetime.datetime.now().month
+                'month': date.month
             }
         }, {
             '$group': {
