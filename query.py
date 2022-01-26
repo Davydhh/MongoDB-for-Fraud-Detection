@@ -28,11 +28,6 @@ def get_current_date():
                     '$max': '$TX_DATETIME'
                 }
             }
-        }, {
-            '$project': {
-                '_id': 0,
-                'current_day': 1
-            }
         }
     ]
 
