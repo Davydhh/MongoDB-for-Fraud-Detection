@@ -8,7 +8,8 @@ from ingestion import db
 def run_queries():
     date = get_current_date()
     run_query_a(date)
-    run_query_b()
+    run_query_b(date)
+    run_query_b_splitted(date)
     run_query_c()
     run_query_d()
     run_query_e()
@@ -50,6 +51,9 @@ def run_query_a(date):
             }
         }, {
             '$project': {
+                'year': {
+                    '$year': '$TX_DATETIME'
+                },
                 'month': {
                     '$month': '$TX_DATETIME'
                 },
@@ -61,6 +65,7 @@ def run_query_a(date):
             }
         }, {
             '$match': {
+                'year': date.year,
                 'month': date.month
             }
         }, {
@@ -92,13 +97,11 @@ def run_query_a(date):
         "executionStats").get("executionTimeMillis") / 1000))
 
 
-def run_query_b():
+def run_query_b(date):
     logging.info("Running query b")
     start_time = time.time()
 
-    now = datetime.datetime.utcnow()
-
-    last_30d = (now - datetime.timedelta(days=30)).timestamp() * 1000
+    last_30d = (date - datetime.timedelta(days=30)).timestamp() * 1000
 
     pipeline = [
         {
@@ -197,14 +200,12 @@ def run_query_b():
     print("Performance about query b: {} seconds\n".format(time.time() - start_time))
 
 
-def run_query_b_splitted():
+def run_query_b_splitted(date):
     logging.info("Running query b splitted")
 
     start_time = time.time()
 
-    now = datetime.datetime.utcnow()
-
-    last_30d = (now - datetime.timedelta(days=30)).timestamp() * 1000
+    last_30d = (date - datetime.timedelta(days=30)).timestamp() * 1000
 
     pipeline = [
         {
