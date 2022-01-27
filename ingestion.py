@@ -33,6 +33,21 @@ def load_datasets():
     with open(os.path.join(path, latest_file)) as file:
         db.transactions.insert_many(json.load(file))
         db.transactions.create_index("TERMINAL_ID")
+        to_datetime()
         logging.info("{} dataset loaded".format(latest_file))
 
     logging.info("Datasets stored on MongoDB in {} seconds".format(time.time() - start_time))
+
+
+def to_datetime():
+    pipeline = [
+        {
+            '$set': {
+                'TX_DATETIME': {
+                    '$toDate': '$TX_DATETIME'
+                }
+            }
+        }
+    ]
+
+    db.transactions.update_many({}, pipeline)

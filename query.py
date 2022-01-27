@@ -1,7 +1,7 @@
 import logging
-import time
-import datetime
 import random
+import time
+
 from ingestion import db
 
 
@@ -9,22 +9,16 @@ def run_queries():
     date = get_current_date()
     run_query_a(date)
     run_query_b(date)
-    run_query_b_splitted(date)
     run_query_c()
     run_query_d()
     run_query_e()
 
+
 def get_current_date():
     pipeline = [
         {
-            '$project': {
-                'TX_DATETIME': {
-                    '$toDate': '$TX_DATETIME'
-                }
-            }
-        }, {
             '$group': {
-                '_id': None, 
+                '_id': None,
                 'current_day': {
                     '$max': '$TX_DATETIME'
                 }
@@ -33,8 +27,8 @@ def get_current_date():
     ]
 
     result = db.transactions.aggregate(pipeline).next()['current_day']
-    
-    return(result)
+
+    return result
 
 
 def run_query_a(date):
@@ -43,14 +37,9 @@ def run_query_a(date):
     pipeline = [
         {
             '$project': {
-                'TX_DATETIME': {
-                    '$toDate': '$TX_DATETIME'
-                },
+                'TERMINAL_ID': 1,
                 'CUSTOMER_ID': 1,
-                'TX_AMOUNT': 1
-            }
-        }, {
-            '$project': {
+                'TX_AMOUNT': 1,
                 'year': {
                     '$year': '$TX_DATETIME'
                 },
@@ -59,9 +48,7 @@ def run_query_a(date):
                 },
                 'day': {
                     '$dayOfMonth': '$TX_DATETIME'
-                },
-                'CUSTOMER_ID': 1,
-                'TX_AMOUNT': 1
+                }
             }
         }, {
             '$match': {
@@ -99,9 +86,6 @@ def run_query_a(date):
 
 def run_query_b(date):
     logging.info("Running query b")
-    start_time = time.time()
-
-    last_30d = (date - datetime.timedelta(days=30)).timestamp() * 1000
 
     pipeline = [
         {
@@ -115,23 +99,32 @@ def run_query_b(date):
             '$project': {
                 'TERMINAL_ID': 1,
                 'transactions': 1,
-                'transactions_avg': '$transactions'
+                'transactions_avg': {
+                    '$map': {
+                        'input': '$transactions',
+                        'as': 'transaction',
+                        'in': {
+                            'TRANSACTION_ID': '$$transaction.TRANSACTION_ID',
+                            'month': {
+                                '$month': '$$transaction.TX_DATETIME'
+                            },
+                            'year': {
+                                '$year': '$$transaction.TX_DATETIME'
+                            },
+                            'TX_AMOUNT': '$$transaction.TX_AMOUNT'
+                        }
+                    }
+                }
             }
         }, {
             '$match': {
-                '$and': [
-                    {
-                        'transactions_avg': {
-                            '$not': {
-                                '$size': 0
-                            }
-                        }
-                    }, {
-                        'transactions_avg.TX_DATETIME': {
-                            '$gte': last_30d
-                        }
+                'transactions_avg': {
+                    '$not': {
+                        '$size': 0
                     }
-                ]
+                },
+                'transactions_avg.month': date.month,
+                'transactions_avg.year': date.year
             }
         }, {
             '$project': {
@@ -142,8 +135,16 @@ def run_query_b(date):
                         'input': '$transactions_avg',
                         'as': 't',
                         'cond': {
-                            '$gt': [
-                                '$$t.TX_DATETIME', last_30d
+                            '$and': [
+                                {
+                                    '$eq': [
+                                        '$$t.month', date.month
+                                    ]
+                                }, {
+                                    '$eq': [
+                                        '$$t.year', date.year
+                                    ]
+                                }
                             ]
                         }
                     }
@@ -177,6 +178,7 @@ def run_query_b(date):
             }
         }, {
             '$project': {
+                'TERMINAL_ID': 1,
                 'transactions': {
                     '$filter': {
                         'input': '$transactions',
@@ -188,10 +190,12 @@ def run_query_b(date):
                         }
                     }
                 },
-                'TERMINAL_ID': 1
+                'transactions_avg': 1
             }
         }
     ]
+
+    start_time = time.time()
 
     db.transactions.aggregate(pipeline)
 
@@ -200,73 +204,8 @@ def run_query_b(date):
     print("Performance about query b: {} seconds\n".format(time.time() - start_time))
 
 
-def run_query_b_splitted(date):
-    logging.info("Running query b splitted")
-
-    start_time = time.time()
-
-    last_30d = (date - datetime.timedelta(days=30)).timestamp() * 1000
-
-    pipeline = [
-        {
-            '$match': {
-                'TX_DATETIME': {
-                    '$gt': last_30d
-                }
-            }
-        }, {
-            '$group': {
-                '_id': '$TERMINAL_ID',
-                'avg': {
-                    '$avg': '$TX_AMOUNT'
-                }
-            }
-        }, {
-            '$project': {
-                'avg': {
-                    '$divide': [
-                        '$avg', 2
-                    ]
-                }
-            }
-        }
-    ]
-
-    result = db.transactions.aggregate(pipeline)
-
-    thresholds = {}
-
-    for doc in result:
-        thresholds[doc["_id"]] = doc["avg"]
-
-    pipeline = [
-        {
-            '$lookup': {
-                'from': 'transactions',
-                'localField': 'TERMINAL_ID',
-                'foreignField': 'TERMINAL_ID',
-                'as': 'transactions'
-            }
-        }
-    ]
-
-    result = db.terminals.aggregate(pipeline)
-
-    fraudolent_transactions = {}
-
-    for doc in result:
-        fraudolent_transactions["TERMINAL_ID"] = doc["TERMINAL_ID"]
-        fraudolent_transactions["transactions"] = [t for t in doc["transactions"] if
-                                                   t["TX_DATETIME"] > thresholds[doc["TERMINAL_ID"]]]
-
-    logging.info("Query b splitted executed")
-
-    print("Performance about query b splitted: {} seconds\n".format(time.time() - start_time))
-
-
 def run_query_c(target_customer=0):
     logging.info("Running query c")
-    start_time = time.time()
 
     pipeline = [
         {
@@ -279,8 +218,10 @@ def run_query_c(target_customer=0):
         }
     ]
 
+    start_time = time.time()
+
     terminals_all = db.transactions.aggregate(pipeline)
-    terminals_target = db.transactions.aggregate(pipeline + [{"$match": {"cust_used_once":target_customer}}])
+    terminals_target = db.transactions.aggregate(pipeline + [{"$match": {"cust_used_once": target_customer}}])
 
     co_customers = set()
     for t_1 in terminals_target:
@@ -298,13 +239,12 @@ def run_query_c(target_customer=0):
 
     print("Performance about query c: {} seconds\n".format(time.time() - start_time))
 
-    return(co_customers)
+    return (co_customers)
 
 
 def run_query_d():
     random.seed(0)
     logging.info("Running query d.i.1")
-    start_time = time.time()
 
     # Point i.1
     pipeline = [
@@ -333,6 +273,8 @@ def run_query_d():
         }
     ]
 
+    start_time = time.time()
+
     db.transactions.update_many({"period": {"$exists": False}}, pipeline)
 
     logging.info("Query d.i.1 executed")
@@ -341,11 +283,12 @@ def run_query_d():
 
     # Point i.2
     logging.info("Running query d.i.2")
-    start_time = time.time()
 
     kinds = ["high-tech", "food", "clothing", "consumable", "other"]
-    db.transactions.update_many({"product_kind": {"$exists": False}}, \
-        {"$set": {"product_kind": random.choice(kinds)}})
+
+    start_time = time.time()
+
+    db.transactions.update_many({"product_kind": {"$exists": False}}, {"$set": {"product_kind": random.choice(kinds)}})
 
     logging.info("Query d.i.2 executed")
 
@@ -353,7 +296,6 @@ def run_query_d():
 
     # point ii
     logging.info("Running query d.ii")
-    start_time = time.time()
 
     pipeline = [
         {
@@ -384,13 +326,15 @@ def run_query_d():
             }
         }]
 
+    start_time = time.time()
+
     result = db.transactions.aggregate(pipeline, allowDiskUse=True)
 
     # explicit representation of the relationship
     for r in result:
-        db.buying_groups.update_many({'terminal': r['_id'].get('ter'), \
-                                    'product_kind': r['_id'].get('prod')}, \
-            {"$addToSet": {"buying_friends": {"$each": r['buying_friends']}}}, upsert=True)
+        db.buying_groups.update_many({'terminal': r['_id'].get('ter'),
+                                      'product_kind': r['_id'].get('prod')},
+                                     {"$addToSet": {"buying_friends": {"$each": r['buying_friends']}}}, upsert=True)
 
     logging.info("Query d.ii executed")
 

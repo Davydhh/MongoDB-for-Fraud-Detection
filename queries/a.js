@@ -1,27 +1,23 @@
 db.transactions.aggregate([
    {
       $project: {
-          "TX_DATETIME": {
-              "$toDate": "$TX_DATETIME"
-          },
+          "TERMINAL_ID": 1,
           "CUSTOMER_ID": 1,
-          "TX_AMOUNT": 1
-      }  
-    },
-    {
-        $project: {
-            "month": {
+          "TX_AMOUNT": 1,
+          "year": {
+              $year: "$TX_DATETIME"
+          },
+           "month": {
                 $month: "$TX_DATETIME"
             },
             "day": {
                 $dayOfMonth: "$TX_DATETIME"  
-            },
-            "CUSTOMER_ID": 1,
-            "TX_AMOUNT": 1
-        }
+            }
+      }  
     },
     {
         $match: {
+            "year": 2018,
             "month": 4
         }
     },

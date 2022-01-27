@@ -1,4 +1,4 @@
-db.terminals.aggregate([
+db.transactions.aggregate([
     {
         $lookup: {
                from: "transactions",
@@ -11,28 +11,31 @@ db.terminals.aggregate([
         $project: {
             "TERMINAL_ID": 1,
             "transactions": 1,
-            "transactions_avg": "$transactions"
-        }
-    },
-    {
-        $match: {
-            $and: [
-                {
-                    "transactions_avg": {
-                        $not: {
-                            $size: 0
-                        }
-                    }   
-                },
-                {
-                    "transactions_avg.TX_DATETIME": {
-                            $gte: 1600721716067
+            "transactions_avg": {
+                $map: {
+                    input: "$transactions",
+                    as: "transaction",
+                    in: {"TRANSACTION_ID": "$$transaction.TRANSACTION_ID", 
+                        "month": {$month: "$$transaction.TX_DATETIME"},
+                        "year": {$year: "$$transaction.TX_DATETIME"},
+                        "TX_AMOUNT": "$$transaction.TX_AMOUNT"
                     }
                 }
-            ]
+            }
         }
     },
-    {
+     {
+        $match: {
+            "transactions_avg": {
+                $not: {
+                    $size: 0
+                }
+            }, 
+            "transactions_avg.month": 4,
+            "transactions_avg.year": 2018
+        }
+    },
+     {
         $project: {
             "transactions": 1,
             "TERMINAL_ID": 1,
@@ -40,12 +43,12 @@ db.terminals.aggregate([
                 $filter: {
                     input: "$transactions_avg",
                     as: "t",
-                    cond: {$gt: ["$$t.TX_DATETIME", 1600721716067]}
+                    cond: {$and: [{$eq: ["$$t.month", 4]}, {$eq: ["$$t.year", 2018]}]}
                 }
             },
         }
     },
-    {
+      {
         $project: {
             "transactions": 1,
             "TERMINAL_ID": 1,
@@ -72,7 +75,6 @@ db.terminals.aggregate([
     },
     {
         $project: {
-            "transactions": 1,
             "TERMINAL_ID": 1,
             "transactions": {
                 $filter: {
@@ -81,6 +83,7 @@ db.terminals.aggregate([
                     cond: {$gt: ["$$t.TX_AMOUNT", "$transactions_avg"]}
                 }
             },
+            "transactions_avg": 1
         }
     }
 ])
