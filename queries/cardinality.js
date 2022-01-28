@@ -1,5 +1,5 @@
-// max cardinality of 'available_terminal' relationship Customer side
-db.customer.aggregate([
+// max cardinality of 'available_terminal' relationship Customers side
+db.customers.aggregate([
     {
         $group: {
             _id: null,
@@ -9,10 +9,9 @@ db.customer.aggregate([
         }
     }
 ])
-// max: 106 ; avg: 75.20
 
-// average cardinality of 'available_terminal' relationship Customer side
-db.customer.aggregate([
+// average cardinality of 'available_terminal' relationship Customers side
+db.customers.aggregate([
     {
         $group: {
             _id: null,
@@ -42,9 +41,6 @@ db.transactions.aggregate([
         }
     }
 ])
-// 2018: max: 179, avg: 77
-// 2018+2019: max: 520, avg: 231  
-// 2018+2019+2020: max: 1200, avg: 538
 
 // average number of transactions per customer
 db.transactions.aggregate([
@@ -85,9 +81,6 @@ db.transactions.aggregate([
         }
     }
 ])
-// 2018: max: 95, avg: 38
-// 2018+2019: max: 263, avg: 115
-// 2018+2019+2020: max: 586, avg: 268
 
 // average number of transactions per terminal
 db.transactions.aggregate([
@@ -110,7 +103,7 @@ db.transactions.aggregate([
 ])
 
 // max cardinality of 'available_terminal' relationship Terminal side
-db.customer.aggregate([
+db.customers.aggregate([
     {
         $unwind: "$available_terminals"
     }, {
@@ -130,10 +123,9 @@ db.customer.aggregate([
         }
     }
 ])
-// max: 63, 37
 
 // average cardinality of 'available_terminal' relationship Terminal side
-db.customer.aggregate([
+db.customers.aggregate([
     {
         $unwind: "$available_terminals"
     },
@@ -153,3 +145,277 @@ db.customer.aggregate([
             }
         }
     }])
+
+// max cardinality of 'buying_friend' relationship
+db.transactions.aggregate([
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "ter": "$_id.ter", "prod": "$_id.prod"
+            },
+            "buying_friends": {
+                "$addToSet": "$_id.cust"
+            }
+        }
+    }, { 
+        "$project": { 
+            "buying_friends": 1, 
+            "n": { 
+                "$subtract": [
+                    { 
+                    "$size": "$buying_friends" 
+                    }, 
+                    1
+                ] 
+            } 
+        } 
+    }, { 
+        "$unwind": "$buying_friends" 
+    }, { 
+        "$group": { 
+            "_id": "$buying_friends", 
+            "n_friends": { 
+                "$sum": "$n" 
+            } 
+        } 
+    }, { 
+        "$group": { 
+            "_id": null, 
+            "max": { 
+                "$max": "$n_friends" 
+            } 
+        } 
+    }
+])
+
+// average cardinality of 'buying_friend' relationship
+db.transactions.aggregate([
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "ter": "$_id.ter", "prod": "$_id.prod"
+            },
+            "buying_friends": {
+                "$addToSet": "$_id.cust"
+            }
+        }
+    }, { 
+        "$project": { 
+            "buying_friends": 1, 
+            "n": { 
+                "$subtract": [
+                    { 
+                    "$size": "$buying_friends" 
+                    }, 
+                    1
+                ] 
+            } 
+        } 
+    }, { 
+        "$unwind": "$buying_friends" 
+    }, { 
+        "$group": { 
+            "_id": "$buying_friends", 
+            "n_friends": { 
+                "$sum": "$n" 
+            } 
+        } 
+    }, { 
+        "$group": { 
+            "_id": null, 
+            "avg": { 
+                "$avg": "$n_friends" 
+            } 
+        } 
+    }
+])
+
+// max cardinality of 'buying_friend' relationship by 'product_kind' and 'terminal_id'
+db.transactions.aggregate([
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "ter": "$_id.ter", "prod": "$_id.prod"
+            },
+            "buying_friends": {
+                "$addToSet": "$_id.cust"
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": null,
+            "max": {
+                "$max": {
+                    "$size": "$buying_friends"
+                }
+            }
+        }
+    }
+])
+
+// average cardinality of 'buying_friend' relationship by 'product_kind' and 'terminal_id'
+db.transactions.aggregate([
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "ter": "$_id.ter", "prod": "$_id.prod"
+            },
+            "buying_friends": {
+                "$addToSet": "$_id.cust"
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": null,
+            "avg": {
+                "$avg": {
+                    "$size": "$buying_friends"
+                }
+            }
+        }
+    }
+])
+
+// max cardinality of 'part_of' relationship customer side
+db.transactions.aggregate([
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": "$_id.cust",
+            "buying_groups": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": null,
+            "max": {
+                "$max": "$buying_groups"
+            }
+        }
+    }
+])
+
+// average cardinality of 'part_of' relationship customer side
+db.transactions.aggregate([
+    {
+        "$group": {
+            "_id": {
+                "ter": "$TERMINAL_ID", "cust": "$CUSTOMER_ID", "prod": "$product_kind"
+            },
+            "count": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$match": {
+            "count": {
+                "$gt": 3
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": "$_id.cust",
+            "buying_groups": {
+                "$sum": 1
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": null,
+            "avg": {
+                "$avg": "$buying_groups"
+            }
+        }
+    }
+])
